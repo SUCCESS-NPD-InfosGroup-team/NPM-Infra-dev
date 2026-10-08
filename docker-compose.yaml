@@ -1,0 +1,94 @@
+# Global local stack for all NPD-RP microservices: `docker compose up --build`
+# Each service lives in its own git submodule; this file only wires them together.
+# Inside the Docker network services reach each other by service name
+# (postgres:5432, backend:8080, ai-service:8000). Host ports come from .env.
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-npd_rp}
+      POSTGRES_USER: ${DB_USER:-npd_rp}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-npd_rp}
+    ports:
+      # 5433 avoids a local Windows PostgreSQL on 5432
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      # Postgres 18 image stores data under /var/lib/postgresql/18/docker
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./NPD-RP-Backend
+    environment:
+      PORT: 8080
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-npd_rp}
+      DB_USER: ${DB_USER:-npd_rp}
+      DB_PASSWORD: ${DB_PASSWORD:-npd_rp}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # --- Frontend (React + Vite) — uncomment once NPD-RP-Frontend submodule is added ---
+  # Runs the Vite dev server with hot reload; sources are bind-mounted from the submodule.
+  # Expects NPD-RP-Frontend/Dockerfile.dev, e.g.:
+  #   FROM node:22-alpine
+  #   WORKDIR /app
+  #   COPY package*.json ./
+  #   RUN npm ci
+  #   COPY . .
+  #   EXPOSE 5173
+  #   CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+  # frontend:
+  #   build:
+  #     context: ./NPD-RP-Frontend
+  #     dockerfile: Dockerfile.dev
+  #   environment:
+  #     # Called from the browser, so it must be the host URL, not backend:8080
+  #     VITE_API_URL: http://localhost:${BACKEND_PORT:-8080}
+  #     # File events don't cross Windows bind mounts; also set server.watch.usePolling in vite.config
+  #     CHOKIDAR_USEPOLLING: "true"
+  #   ports:
+  #     - "${FRONTEND_PORT:-5173}:5173"
+  #   volumes:
+  #     - ./NPD-RP-Frontend:/app
+  #     # Keep the container's node_modules instead of the host's
+  #     - /app/node_modules
+  #   depends_on:
+  #     - backend
+
+  # --- AI Service (Python FastAPI) — uncomment once NPD-RP-AI-Service submodule is added ---
+  # Expects NPD-RP-AI-Service/Dockerfile, e.g.:
+  #   FROM python:3.13-slim
+  #   WORKDIR /app
+  #   COPY requirements.txt .
+  #   RUN pip install --no-cache-dir -r requirements.txt
+  #   COPY . .
+  #   EXPOSE 8000
+  #   CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+  # ai-service:
+  #   build: ./NPD-RP-AI-Service
+  #   environment:
+  #     BACKEND_URL: http://backend:8080
+  #     DATABASE_URL: postgresql://${DB_USER:-npd_rp}:${DB_PASSWORD:-npd_rp}@postgres:5432/${DB_NAME:-npd_rp}
+  #   ports:
+  #     - "${AI_SERVICE_PORT:-8000}:8000"
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  pgdata:
