@@ -5,6 +5,7 @@ Global Docker Compose environment for the NPD-RP microservices. Each service is 
 | Service    | Submodule           | Status      | Host port |
 |------------|---------------------|-------------|-----------|
 | Postgres   | —                   | active      | 5433      |
+| Flyway     | — (`db/migration`)  | active      | —         |
 | Backend    | `NPD-RP-Backend`    | active      | 8080      |
 | Frontend   | `NPD-RP-Frontend`   | not created | 5173      |
 | AI Service | `NPD-RP-AI-Service` | not created | 8000      |
@@ -20,6 +21,52 @@ docker compose up --build
 Already cloned without submodules: `git submodule update --init --recursive`.
 
 Health check: `curl localhost:8080/actuator/health`
+
+## Database migrations
+
+The schema is versioned with [Flyway](https://documentation.red-gate.com/flyway). Migrations live in `db/migration` and the `flyway` service applies them on every `docker compose up`, after Postgres is healthy and before the backend starts. Already-applied versions are skipped, so the same files produce the same schema in every environment.
+
+- Add a change: create `db/migration/V<next>__<description>.sql` (e.g. `V3__add_skills.sql`). Never edit a migration that has already been applied; add a new one instead.
+- Run only the migrations: `docker compose run --rm flyway` (or `docker compose run --rm flyway info` to see what is applied).
+- Start from scratch: `docker compose down -v` drops the `pgdata` volume.
+
+The backend mounts the same folder and points `SPRING_FLYWAY_LOCATIONS` at it, so Spring Boot's Flyway validates the same migrations instead of its empty `classpath:db/migration`.
+
+### Initial data model
+
+Built from the 22 columns of the client's planner (`PLANIFICACION DE RECURSOS NPD`, sheet `PLANIFICADOR`). A planner row is an employee plus one of their assignments:
+
+- `employee`: the person (code, name, email, HR data, employment status).
+- `assignment`: the employee on a project. An employee can have several active assignments at once; closed ones are kept as history.
+- `resource_v`: view that rebuilds the planner columns, one row per active assignment (or one row for an employee without any).
+
+| Planner column                | Stored in                                                   |
+|-------------------------------|-------------------------------------------------------------|
+| CLIENTE                       | `project.client_id` → `client` (through the assignment's project) |
+| PROYECTO ASIGNADO             | `assignment.project_id` → `project` (`NULL` = without project) |
+| LIDER NPD, COD LIDER          | `assignment.leader_id` → `employee` (the lead is an employee) |
+| COD EMPL                      | `employee.code` (text, unique; admits temporary codes such as `T001`) |
+| NOMBRE DE EMPLEADO            | `employee.full_name`                                        |
+| PUESTO                        | `employee.job_title_id` → `job_title`                       |
+| POSICIÓN                      | `employee.job_position_id` → `job_position`                 |
+| ROL ACTUAL EN CLIENTE         | `assignment.client_role_id` → `client_role`                 |
+| NIVEL                         | `employee.level`                                            |
+| FECHA DE INICIO               | `employee.hire_date` (hire date); the start on each project is `assignment.start_date` |
+| UEN                           | `employee.business_unit_id` → `business_unit`               |
+| GENERO                        | `employee.gender_id` → `gender`                             |
+| EQUIPO / LAPTOP               | `assignment.equipment_provider_id` → `equipment_provider`   |
+| MES DE PROBATORIA             | `employee.probation_end_date`, calculated: `hire_date` + 90 days |
+| MES DE VACACIONES             | `employee.vacation_month`, calculated: month when 11 months since `hire_date` are completed |
+| FECHA FINAL PROYECTO          | `assignment.end_date` (`NULL` = INDEFINIDO)                 |
+| MES FINAL DE PROYECTO         | `resource_v.project_end_month`, calculated from `end_date`  |
+| ESTADO                        | `employee.status_id` → `resource_status` (Activo, Licencia, Baja) + `resource_v.assignment_situation` |
+| CORREO RECURSO                | `employee.email` (required, unique, case-insensitive)       |
+| CONTACTO POR CLIENTE          | `assignment.client_contact_email`                           |
+| MODALIDAD LABORAL DEL RECURSO | `employee.work_modality_id` → `work_modality`               |
+
+`assignment_situation` is derived, never typed: `SIN_PROYECTO` when there is no project, `PENDIENTE_CONFIRMACION` when the end date has passed and the assignment has not been extended or closed yet, and `ASIGNADO` otherwise. An employee is therefore never shown as departed just because a project ended.
+
+V1 seeds only the fixed catalogs the application needs (`resource_status`, `business_unit`, `equipment_provider`, `work_modality`); no client or personal data from the planner is loaded. Catalog names are unique case-insensitively.
 
 Each service's own `compose.yaml` still works standalone, but it uses the same host ports, so don't run both stacks at once.
 
