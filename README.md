@@ -34,33 +34,39 @@ The backend mounts the same folder and points `SPRING_FLYWAY_LOCATIONS` at it, s
 
 ### Initial data model
 
-Built from the 22 columns of the client's planner (`PLANIFICACION DE RECURSOS NPD`, sheet `PLANIFICADOR`). One `resource` row per employee, as in the planner; repeated values are catalogs.
+Built from the 22 columns of the client's planner (`PLANIFICACION DE RECURSOS NPD`, sheet `PLANIFICADOR`). A planner row is an employee plus one of their assignments:
 
-| Planner column                | Stored in                                          |
-|-------------------------------|----------------------------------------------------|
-| CLIENTE                       | `resource.client_id` → `client`                    |
-| PROYECTO ASIGNADO             | `resource.project_id` → `project` (belongs to a client) |
-| LIDER NPD, COD LIDER          | `resource.leader_id` → `npd_leader` (`full_name`, `employee_code`) |
-| COD EMPL                      | `resource.employee_code` (unique)                  |
-| NOMBRE DE EMPLEADO            | `resource.full_name`                               |
-| PUESTO                        | `resource.job_title_id` → `job_title`              |
-| POSICIÓN                      | `resource.job_position_id` → `job_position`        |
-| ROL ACTUAL EN CLIENTE         | `resource.client_role_id` → `client_role`          |
-| NIVEL                         | `resource.level`                                   |
-| FECHA DE INICIO               | `resource.start_date`                              |
-| UEN                           | `resource.business_unit_id` → `business_unit`      |
-| GENERO                        | `resource.gender_id` → `gender`                    |
-| EQUIPO / LAPTOP               | `resource.equipment_provider_id` → `equipment_provider` |
-| MES DE PROBATORIA             | `resource.probation_month` (1st of the month)      |
-| MES DE VACACIONES             | `resource.vacation_month` (1st of the month)       |
-| FECHA FINAL PROYECTO          | `resource.project_end_date` (`NULL` = INDEFINIDO)  |
-| MES FINAL DE PROYECTO         | `resource.project_end_month` (generated from the end date) |
-| ESTADO                        | `resource.status_id` → `resource_status`           |
-| CORREO RECURSO                | `resource.email` (unique, case-insensitive)        |
-| CONTACTO POR CLIENTE          | `resource.client_contact_email`                    |
-| MODALIDAD LABORAL DEL RECURSO | `resource.work_modality_id` → `work_modality`      |
+- `employee`: the person (code, name, email, HR data, employment status).
+- `assignment`: the employee on a project. An employee can have several active assignments at once; closed ones are kept as history.
+- `resource_v`: view that rebuilds the planner columns, one row per active assignment (or one row for an employee without any).
 
-The migrations only create the schema; they load no data. Catalog names are unique case-insensitively, and a resource's project must belong to its client.
+| Planner column                | Stored in                                                   |
+|-------------------------------|-------------------------------------------------------------|
+| CLIENTE                       | `project.client_id` → `client` (through the assignment's project) |
+| PROYECTO ASIGNADO             | `assignment.project_id` → `project` (`NULL` = without project) |
+| LIDER NPD, COD LIDER          | `assignment.leader_id` → `employee` (the lead is an employee) |
+| COD EMPL                      | `employee.code` (text, unique; admits temporary codes such as `T001`) |
+| NOMBRE DE EMPLEADO            | `employee.full_name`                                        |
+| PUESTO                        | `employee.job_title_id` → `job_title`                       |
+| POSICIÓN                      | `employee.job_position_id` → `job_position`                 |
+| ROL ACTUAL EN CLIENTE         | `assignment.client_role_id` → `client_role`                 |
+| NIVEL                         | `employee.level`                                            |
+| FECHA DE INICIO               | `employee.hire_date` (hire date); the start on each project is `assignment.start_date` |
+| UEN                           | `employee.business_unit_id` → `business_unit`               |
+| GENERO                        | `employee.gender_id` → `gender`                             |
+| EQUIPO / LAPTOP               | `assignment.equipment_provider_id` → `equipment_provider`   |
+| MES DE PROBATORIA             | `employee.probation_end_date`, calculated: `hire_date` + 90 days |
+| MES DE VACACIONES             | `employee.vacation_month`, calculated: month when 11 months since `hire_date` are completed |
+| FECHA FINAL PROYECTO          | `assignment.end_date` (`NULL` = INDEFINIDO)                 |
+| MES FINAL DE PROYECTO         | `resource_v.project_end_month`, calculated from `end_date`  |
+| ESTADO                        | `employee.status_id` → `resource_status` (Activo, Licencia, Baja) + `resource_v.assignment_situation` |
+| CORREO RECURSO                | `employee.email` (required, unique, case-insensitive)       |
+| CONTACTO POR CLIENTE          | `assignment.client_contact_email`                           |
+| MODALIDAD LABORAL DEL RECURSO | `employee.work_modality_id` → `work_modality`               |
+
+`assignment_situation` is derived, never typed: `SIN_PROYECTO` when there is no project, `PENDIENTE_CONFIRMACION` when the end date has passed and the assignment has not been extended or closed yet, and `ASIGNADO` otherwise. An employee is therefore never shown as departed just because a project ended.
+
+V1 seeds only the fixed catalogs the application needs (`resource_status`, `business_unit`, `equipment_provider`, `work_modality`); no client or personal data from the planner is loaded. Catalog names are unique case-insensitively.
 
 Each service's own `compose.yaml` still works standalone, but it uses the same host ports, so don't run both stacks at once.
 
