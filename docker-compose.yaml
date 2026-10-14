@@ -60,33 +60,26 @@ services:
       flyway:
         condition: service_completed_successfully
 
-  # --- Frontend (React + Vite) — uncomment once NPD-RP-Frontend submodule is added ---
+  # --- Frontend (React + Vite) ---
   # Runs the Vite dev server with hot reload; sources are bind-mounted from the submodule.
-  # Expects NPD-RP-Frontend/Dockerfile.dev, e.g.:
-  #   FROM node:22-alpine
-  #   WORKDIR /app
-  #   COPY package*.json ./
-  #   RUN npm ci
-  #   COPY . .
-  #   EXPOSE 5173
-  #   CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
-  # frontend:
-  #   build:
-  #     context: ./NPD-RP-Frontend
-  #     dockerfile: Dockerfile.dev
-  #   environment:
-  #     # Called from the browser, so it must be the host URL, not backend:8080
-  #     VITE_API_URL: http://localhost:${BACKEND_PORT:-8080}
-  #     # File events don't cross Windows bind mounts; also set server.watch.usePolling in vite.config
-  #     CHOKIDAR_USEPOLLING: "true"
-  #   ports:
-  #     - "${FRONTEND_PORT:-5173}:5173"
-  #   volumes:
-  #     - ./NPD-RP-Frontend:/app
-  #     # Keep the container's node_modules instead of the host's
-  #     - /app/node_modules
-  #   depends_on:
-  #     - backend
+  # Built from NPD-RP-frontend/Dockerfile.dev.
+  frontend:
+    build:
+      context: ./NPD-RP-frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      # Vite proxies /api to this from inside the container, so it uses the service name
+      API_PROXY_TARGET: http://backend:8080
+      # File events don't cross Windows bind mounts; vite.config enables polling with this
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./NPD-RP-frontend:/app
+      # Keep the container's node_modules instead of the host's
+      - /app/node_modules
+    depends_on:
+      - backend
 
   # --- AI Service (Python FastAPI) — uncomment once NPD-RP-AI-Service submodule is added ---
   # Expects NPD-RP-AI-Service/Dockerfile, e.g.:
