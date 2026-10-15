@@ -1,0 +1,40 @@
+/* Design tokens from Figma "NPD-InfosGroup" (variables). Same names and values as
+   NPD-RP-frontend/src/styles/tokens.css, plus border-default and surface-group. Keep both in sync. */
+:root {
+  /* Brand */
+  --brand-orange: #ff5000;
+  --brand-orange-deep: #c73e00;
+  --brand-orange-tint: #ffe6d9;
+  --brand-navy: #003d7a;
+  --brand-navy-tint: #e3ecf6;
+  --brand-brown: #4a231c;
+  --brand-brown-deep: #3a1a14;
+  --brand-brown-text: #f3e6e2;
+
+  /* Text */
+  --text-primary: #333333;
+  --text-secondary: #5e5a57;
+  --text-on-brand: #ffffff;
+
+  /* Surfaces and borders */
+  --surface-page: #f5f5f5;
+  --surface-card: #ffffff;
+  --surface-group: #f7f4f2;
+  --border-default: #e4e1de;
+  --border-strong: #cfcac6;
+
+  /* States */
+  --state-ok: #1e7b4f;
+  --state-ok-tint: #e2f2ea;
+  --state-warn: #9a5800;
+  --state-warn-tint: #fdf0dc;
+  --state-danger: #b42318;
+  --state-danger-tint: #fbe5e3;
+
+  /* Typography */
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+
+  /* Sizes */
+  --radius: 4px;
+}

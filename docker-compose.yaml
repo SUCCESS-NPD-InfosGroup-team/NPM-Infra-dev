@@ -80,6 +80,8 @@ services:
     volumes:
       - keycloak-data:/opt/keycloak/data
       - ./keycloak:/opt/keycloak/data/import
+      # Login theme "npd" (keycloak/themes/npd); start-dev disables theme caching, so edits show on reload
+      - ./keycloak/themes:/opt/keycloak/themes:ro
     healthcheck:
       # The image has no curl/wget; probe the management port with bash
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]

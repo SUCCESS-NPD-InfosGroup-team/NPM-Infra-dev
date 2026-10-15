@@ -1,0 +1,291 @@
+/* NPD atoms. theme.properties maps Keycloak's kc* classes to these, so every login page
+   (login, reset password, update profile/password, errors) uses them. */
+
+/* Logo "IG" (Figma Logo 18:153) */
+.npd-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--brand-orange);
+  font: 700 15px/1 var(--font-display);
+}
+.npd-logo--inverse {
+  background: var(--brand-orange);
+  color: var(--text-on-brand);
+}
+
+/* Title and subtitle */
+.npd-title {
+  margin: 0;
+  color: var(--text-primary);
+  font: 700 34px/1.2 var(--font-display);
+}
+.npd-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Field: label + control (Figma Field 18:184) */
+.npd-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.npd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.npd-label {
+  color: var(--text-primary);
+  font: 600 13px/1.2 var(--font-body);
+}
+.npd-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: 400 14px/1.2 var(--font-body);
+}
+textarea.npd-input {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+}
+select.npd-input {
+  padding-right: 6px;
+}
+.npd-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.npd-input:hover {
+  border-color: var(--text-secondary);
+}
+.npd-input:focus {
+  outline: 2px solid var(--brand-navy-tint);
+  outline-offset: 0;
+  border-color: var(--brand-navy);
+}
+.npd-input[aria-invalid="true"] {
+  border-color: var(--state-danger);
+}
+.npd-input[aria-invalid="true"]:focus {
+  outline-color: var(--state-danger-tint);
+}
+.npd-input:disabled,
+.npd-input[readonly] {
+  background: var(--surface-group);
+  color: var(--text-secondary);
+}
+.npd-field__error {
+  color: var(--state-danger);
+  font-size: 12.5px;
+}
+.npd-field__help {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+.npd-field__control {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+/* Label + required asterisk on one line (user profile fields) */
+.npd-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.npd-field__label .required {
+  color: var(--state-danger);
+}
+
+/* Input with the password visibility toggle */
+.npd-input-group {
+  position: relative;
+  display: flex;
+}
+.npd-input-group .npd-input {
+  padding-right: 40px;
+}
+.npd-input-group__toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.npd-input-group__toggle:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: -4px;
+  border-radius: var(--radius);
+}
+
+/* Icons (lucide eye / eye-off / rotate-ccw), drawn with currentColor */
+.npd-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: var(--npd-icon) center / contain no-repeat;
+  mask: var(--npd-icon) center / contain no-repeat;
+}
+.npd-icon--eye {
+  --npd-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+.npd-icon--eye-off {
+  --npd-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.73 5.08A10.43 10.43 0 0 1 12 5c4.97 0 8.27 3.65 9.94 6.65a1 1 0 0 1 0 .7 10.8 10.8 0 0 1-2.04 2.97'/%3E%3Cpath d='M14.08 14.16a3 3 0 0 1-4.24-4.24'/%3E%3Cpath d='M17.48 17.5A10.8 10.8 0 0 1 12 19c-4.97 0-8.27-3.65-9.94-6.65a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14'/%3E%3Cpath d='m2 2 20 20'/%3E%3C/svg%3E");
+}
+.npd-icon--restart {
+  --npd-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E");
+}
+
+/* Checkbox (Figma Rectangle 18:194: 14px, radius 3) */
+.npd-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.npd-checkbox__input {
+  appearance: none;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface-card) center / 10px no-repeat;
+  cursor: pointer;
+}
+.npd-checkbox__input--radio {
+  border-radius: 50%;
+}
+.npd-checkbox__input:checked {
+  border-color: var(--brand-orange-deep);
+  background-color: var(--brand-orange-deep);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+.npd-checkbox__input:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+}
+.npd-checkbox--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Link (Figma 18:196) */
+.npd-link,
+.npd-options__links a,
+.npd-info a {
+  color: var(--brand-navy);
+  font-size: 13.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.npd-link:hover,
+.npd-options__links a:hover {
+  text-decoration-thickness: 2px;
+}
+.npd-link:focus-visible,
+.npd-options__links a:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Button (Figma Button/Iniciar sesión 18:197) */
+.npd-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font: 600 14px/1 var(--font-body);
+  cursor: pointer;
+  text-decoration: none;
+}
+.npd-button--primary {
+  border-color: var(--brand-orange-deep);
+  background: var(--brand-orange-deep);
+  color: var(--text-on-brand);
+}
+.npd-button--primary:hover {
+  border-color: #a83400;
+  background: #a83400;
+}
+.npd-button--secondary:hover {
+  background: var(--surface-group);
+}
+.npd-button--large {
+  height: 44px;
+}
+.npd-button--block {
+  width: 100%;
+}
+.npd-button:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+}
+.npd-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Alert (login errors, info and success messages) */
+.npd-alert {
+  padding: 10px 12px;
+  border-left: 3px solid var(--brand-navy);
+  border-radius: var(--radius);
+  background: var(--brand-navy-tint);
+  color: var(--text-primary);
+  font-size: 13.5px;
+}
+.npd-alert--error {
+  border-left-color: var(--state-danger);
+  background: var(--state-danger-tint);
+}
+.npd-alert--warning {
+  border-left-color: var(--state-warn);
+  background: var(--state-warn-tint);
+}
+.npd-alert--success {
+  border-left-color: var(--state-ok);
+  background: var(--state-ok-tint);
+}
+
+.npd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -81,6 +81,14 @@ Runs `quay.io/keycloak/keycloak:26.7.5` in dev mode (HTTP, embedded H2 database 
 - From the browser: `http://localhost:8081/realms/<realm>`. Tokens always carry this URL as `iss`.
 - From other containers (e.g. the backend): `http://keycloak:8080/realms/<realm>` for the JWKS (`/protocol/openid-connect/certs`) and token endpoints. Validate the issuer against the `localhost:8081` URL, not this one.
 
+### Login theme (`keycloak/themes/npd`)
+
+The login pages use the `npd` theme, built from the Figma mockup (`NPD-InfosGroup`, frame *Login*). It extends Keycloak's `base` theme (templates and scripts only, no PatternFly) and maps Keycloak's `kc*` CSS classes to the NPD atoms in `resources/css/atoms.css`, so every login page (login, forgot password, complete profile, update password, errors) uses the same look. Texts are in `messages/messages_es.properties`; Barlow fonts are served by Keycloak itself.
+
+- The realm must have `"loginTheme": "npd"` and Spanish enabled (`"internationalizationEnabled": true`, `"supportedLocales": ["es"]`, `"defaultLocale": "es"`). Keep them in the realm export; for a realm already imported, set them in *Realm settings → Themes / Localization*.
+- `start-dev` disables theme caching: edit the CSS or templates and reload the page.
+- `tokens.css` copies the values of `NPD-RP-frontend/src/styles/tokens.css`; keep both in sync.
+
 ### Realm export (`keycloak/*.json`)
 
 On start Keycloak imports every `*.json` in `keycloak/` (mounted at `/opt/keycloak/data/import`). Each file must be named `<realm>-realm.json` after the realm it contains (the project realm is `npd`, so `npd-realm.json`); with any other name Keycloak refuses to start. The import only creates realms that don't exist yet: an already imported realm is never overwritten, so after changing the file run `docker compose down` and `docker volume rm <project>_keycloak-data` (or `docker compose down -v`, which also wipes Postgres) and start again.
