@@ -7,6 +7,7 @@ Global Docker Compose environment for the NPD-RP microservices. Each service is 
 | Postgres   | —                   | active      | 5433      |
 | Flyway     | — (`db/migration`)  | active      | —         |
 | Backend    | `NPD-RP-Backend`    | active      | 8080      |
+| Keycloak   | — (`keycloak/`)     | active      | 8081      |
 | Frontend   | `NPD-RP-Frontend`   | not created | 5173      |
 | AI Service | `NPD-RP-AI-Service` | not created | 8000      |
 
@@ -17,6 +18,8 @@ git clone --recurse-submodules <this-repo-url>
 cp .env.example .env
 docker compose up --build
 ```
+
+> **Required file:** Keycloak needs the realm export `keycloak/npd-realm.json` to start with the project's realm, clients and API keys. It is not in git because it holds secrets: ask the team for it and copy it there **before the first `docker compose up`**. Without it Keycloak starts with only the `master` realm and the services that authenticate against it won't work. See [Keycloak](#keycloak).
 
 Already cloned without submodules: `git submodule update --init --recursive`.
 
@@ -69,6 +72,30 @@ Built from the 22 columns of the client's planner (`PLANIFICACION DE RECURSOS NP
 V1 seeds only the fixed catalogs the application needs (`resource_status`, `business_unit`, `equipment_provider`, `work_modality`); no client or personal data from the planner is loaded. Catalog names are unique case-insensitively.
 
 Each service's own `compose.yaml` still works standalone, but it uses the same host ports, so don't run both stacks at once.
+
+## Keycloak
+
+Runs `quay.io/keycloak/keycloak:26.7.5` in dev mode (HTTP, embedded H2 database in the `keycloak-data` volume).
+
+- Admin console: http://localhost:8081, user and password from `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` in `.env` (only applied on the very first start).
+- From the browser: `http://localhost:8081/realms/<realm>`. Tokens always carry this URL as `iss`.
+- From other containers (e.g. the backend): `http://keycloak:8080/realms/<realm>` for the JWKS (`/protocol/openid-connect/certs`) and token endpoints. Validate the issuer against the `localhost:8081` URL, not this one.
+
+### Realm export (`keycloak/*.json`)
+
+On start Keycloak imports every `*.json` in `keycloak/` (mounted at `/opt/keycloak/data/import`). Each file must be named `<realm>-realm.json` after the realm it contains (the project realm is `npd`, so `npd-realm.json`); with any other name Keycloak refuses to start. The import only creates realms that don't exist yet: an already imported realm is never overwritten, so after changing the file run `docker compose down` and `docker volume rm <project>_keycloak-data` (or `docker compose down -v`, which also wipes Postgres) and start again.
+
+The file is ignored by git (`keycloak/*.json` and `*realm*.json` in the root) because it contains client secrets, API keys and users. Share it through a secure channel, never in a commit or a chat.
+
+Export the realm after configuring it in the admin console. Use the CLI, not the console's *Partial export*: that one masks client secrets as `**********` and leaves out users.
+
+```sh
+docker compose stop keycloak
+docker compose run --rm keycloak export --dir /opt/keycloak/data/import --realm <realm> --users realm_file
+docker compose start keycloak
+```
+
+This writes `keycloak/<realm>-realm.json`. In Git Bash prefix the second command with `MSYS_NO_PATHCONV=1`, otherwise it rewrites `/opt/...` into a Windows path and the export fails.
 
 ## Adding the Frontend / AI Service
 

@@ -60,6 +60,34 @@ services:
       flyway:
         condition: service_completed_successfully
 
+  # Identity provider. Local dev mode (HTTP, embedded H2 database kept in the keycloak-data volume).
+  # On first start it imports every *.json realm in ./keycloak; realms that already exist are skipped.
+  # The realm export is not in git (it holds client secrets): see README > Keycloak.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Tokens always carry the browser URL as issuer; containers (backend) can still
+      # reach Keycloak at http://keycloak:8080 for keys and token introspection
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8081}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      # 8081 because the backend already uses 8080 on the host
+      - "${KEYCLOAK_PORT:-8081}:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak:/opt/keycloak/data/import
+    healthcheck:
+      # The image has no curl/wget; probe the management port with bash
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
   # --- Frontend (React + Vite) ---
   # Runs the Vite dev server with hot reload; sources are bind-mounted from the submodule.
   # Built from NPD-RP-frontend/Dockerfile.dev.
@@ -108,3 +136,4 @@ services:
 
 volumes:
   pgdata:
+  keycloak-data:
