@@ -1,3 +1,7 @@
 .env
 .idea/
 .vscode/
+
+# Keycloak realm exports hold client secrets and API keys; shared outside git
+keycloak/*.json
+/*realm*.json

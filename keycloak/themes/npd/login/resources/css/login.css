@@ -1,0 +1,184 @@
+/* Layout of Figma frame Login (18:150): brand side 749/1440 + form side. */
+html.npd,
+.npd-body {
+  margin: 0;
+  min-height: 100%;
+}
+.npd-body {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: 400 14px/1.4 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.npd-login {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Brand side (18:151) */
+.npd-brand {
+  display: flex;
+  flex: 0 0 52%;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 40px;
+  background: var(--brand-orange);
+  color: var(--text-on-brand);
+}
+.npd-brand__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 48px;
+}
+.npd-brand__name {
+  font: 700 22px/1 var(--font-display);
+}
+.npd-brand__spacer {
+  flex: 1 0 24px;
+}
+.npd-brand__headline {
+  margin: 0;
+  padding: 0 48px;
+  font: 700 64px/61px var(--font-display);
+}
+.npd-brand__tagline {
+  max-width: 440px;
+  margin: 0 0 32px;
+  padding: 0 48px;
+  font: 700 20px/29px var(--font-body);
+}
+
+/* Roster preview (18:160): decorative, positions from Figma as % of the 749px side */
+.npd-roster {
+  position: relative;
+  flex: none;
+  height: 192px;
+  overflow: hidden;
+  background: var(--brand-brown);
+}
+.npd-roster__month {
+  position: absolute;
+  top: 18px;
+  font: 700 12px/1 var(--font-display);
+  letter-spacing: 0.96px;
+}
+.npd-roster__bar {
+  position: absolute;
+  height: 16px;
+  border-radius: 3px;
+  background: #fff;
+}
+.npd-roster__notice {
+  position: absolute;
+  width: 2px;
+  height: 24px;
+  background: var(--brand-orange);
+}
+.npd-roster__today {
+  position: absolute;
+  top: 38px;
+  width: 2px;
+  height: 132px;
+  background: #8db8e8;
+}
+.npd-brand__footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 48px;
+  background: var(--brand-brown-deep);
+  color: var(--brand-brown-text);
+  font: 500 13px/1.2 var(--font-body);
+}
+
+/* Form side (18:179) */
+.npd-main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 40px 16px;
+}
+.npd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+}
+.npd-card__mobile-brand {
+  display: none;
+}
+.npd-attempted {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.npd-required {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+.npd-required .required {
+  color: var(--state-danger);
+}
+
+/* "Recordar mi correo" + "¿Olvidaste tu contraseña?" row (18:192) */
+.npd-options {
+  display: flex;
+  /* also carries npd-field (column) on base pages */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.npd-options__left:empty {
+  display: none;
+}
+/* Base templates (reset password, update profile) put the links and the buttons in the same
+   group: the buttons always take their own full-width row below the links */
+.npd-actions {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.npd-actions > .npd-button {
+  flex: 1 1 auto;
+}
+
+/* "¿No tienes acceso?..." (18:213) and other info texts */
+.npd-info {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+/* User profile groups (update profile page) */
+.npd-field-group {
+  margin-top: 8px;
+  font: 700 18px/1.2 var(--font-display);
+}
+
+/* Narrow screens: only the form, with the logo on top */
+@media (max-width: 900px) {
+  .npd-brand {
+    display: none;
+  }
+  .npd-main {
+    align-items: flex-start;
+    padding: 32px 16px;
+  }
+  .npd-card__mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font: 700 20px/1 var(--font-display);
+  }
+}
