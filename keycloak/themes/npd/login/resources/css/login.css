@@ -182,3 +182,55 @@ html.npd,
     font: 700 20px/1 var(--font-display);
   }
 }
+
+/* "o" separator (18:202) + identity provider buttons (Continuar con Google 18:206) */
+.npd-social {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.npd-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.npd-divider::before,
+.npd-divider::after {
+  content: "";
+  flex: 1 0 0;
+  height: 1px;
+  background: var(--border-strong);
+}
+.npd-social__button {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #dadce0;
+  border-radius: var(--radius);
+  background: #fff;
+  color: #3c4043;
+  font: 600 15px/1 var(--font-body);
+  text-decoration: none;
+}
+.npd-social__button:hover {
+  background: #f8f9fa;
+}
+.npd-social__button:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+}
+.npd-social__button--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.npd-social__logo {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
