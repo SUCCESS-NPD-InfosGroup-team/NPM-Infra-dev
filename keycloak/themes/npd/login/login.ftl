@@ -1,7 +1,7 @@
 <#--
   Login form (Figma 18:180). Based on base/login/login.ftl from Keycloak 26.7.5.
-  Without social providers and registration: the realm has neither, and the mockup's
-  Google button is out of scope for now.
+  Without registration (users are created by Operations Administrator). Identity providers
+  enabled in the realm show up below the form as in the mockup ("o" + "Continuar con Google").
 -->
 <#import "template.ftl" as layout>
 <#import "passkeys.ftl" as passkeys>
@@ -59,6 +59,23 @@
             </form>
         </#if>
         <@passkeys.conditionalUIData />
+    <#elseif section = "socialProviders">
+        <#if social?? && social.providers?has_content>
+            <div id="kc-social-providers" class="npd-social">
+                <#if realm.password>
+                    <div class="npd-divider" aria-hidden="true"><span>${msg("npdOr")}</span></div>
+                </#if>
+                <#list social.providers as p>
+                    <a data-once-link data-disabled-class="npd-social__button--disabled" id="social-${p.alias}"
+                       class="npd-social__button" href="${p.loginUrl}">
+                        <#if p.providerId == "google">
+                            <img class="npd-social__logo" src="${url.resourcesPath}/img/google.svg" alt="" width="18" height="18">
+                        </#if>
+                        <span>${msg("npdContinueWith", p.displayName!p.alias)}</span>
+                    </a>
+                </#list>
+            </div>
+        </#if>
     <#elseif section = "info">
         ${msg("npdNoAccess")}
     </#if>
