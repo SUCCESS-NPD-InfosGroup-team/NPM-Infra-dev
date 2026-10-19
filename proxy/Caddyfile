@@ -1,6 +1,6 @@
 # Proxy público: lo único expuesto a internet. Lista de permitidos:
-# - auth.*: el realm npd y los recursos del tema; la consola solo con KC_ADMIN_CONSOLE=on
-# - api.*: los módulos del backend (todos exigen JWT); /actuator queda cerrado
+# - Keycloak: el realm npd y los recursos del tema; la consola solo con KC_ADMIN_CONSOLE=on
+# - Backend: los módulos bajo /api (todos exigen JWT); /actuator queda cerrado
 # Todo lo demás responde 404.
 {
 	admin off
@@ -11,7 +11,6 @@
 	reverse_proxy {args[0]} {
 		# Railway termina el HTTPS: el servicio debe saber que el usuario entró por https
 		header_up X-Forwarded-Proto https
-		header_up X-Forwarded-Host {host}
 		# IP real del usuario (la pone Railway): bloqueo por fuerza bruta, eventos y logs
 		header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
 	}
@@ -23,16 +22,12 @@
 		respond "ok" 200
 	}
 
-	@keycloak {
-		host {$AUTH_DOMAIN}
-		path /realms/npd /realms/npd/* /resources/* /robots.txt
-	}
+	@keycloak path /realms/npd /realms/npd/* /resources/* /robots.txt
 	handle @keycloak {
 		import upstream {$KEYCLOAK_UPSTREAM}
 	}
 
 	@keycloak_admin {
-		host {$AUTH_DOMAIN}
 		path /admin/* /realms/master /realms/master/*
 		expression `{env.KC_ADMIN_CONSOLE} == "on"`
 	}
@@ -41,10 +36,7 @@
 	}
 
 	# Un módulo nuevo del backend se agrega a esta lista
-	@backend {
-		host {$API_DOMAIN}
-		path_regexp ^/api/(v[0-9]+/)?(planner|history|insights|reports|export|access|notifications)(/|$)
-	}
+	@backend path_regexp ^/api/(v[0-9]+/)?(planner|history|insights|reports|export|access|notifications)(/|$)
 	handle @backend {
 		import upstream {$BACKEND_UPSTREAM}
 	}
