@@ -21,24 +21,27 @@ services:
       timeout: 5s
       retries: 10
 
-  # Applies the versioned SQL migrations in ./db/migration on every `up`,
-  # then exits. Already-applied versions are skipped, so this is idempotent.
-  flyway:
-    image: flyway/flyway:11-alpine
-    command: migrate
+  # Web client for the database at http://localhost:5050. Desktop mode: no pgAdmin login,
+  # only the database password on the first connection. Local use only.
+  # The server in ./pgadmin/servers.json is registered on the first start (kept in pgadmin-data).
+  pgadmin:
+    image: dpage/pgadmin4:9.8
     environment:
-      FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-npd_rp}
-      FLYWAY_USER: ${DB_USER:-npd_rp}
-      FLYWAY_PASSWORD: ${DB_PASSWORD:-npd_rp}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      # Never let a stray `flyway clean` wipe a shared database
-      FLYWAY_CLEAN_DISABLED: "true"
+      # Required by the image even in desktop mode; never asked for
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
     volumes:
-      - ./db/migration:/flyway/sql:ro
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
     depends_on:
       postgres:
         condition: service_healthy
 
+  # Applies its own Flyway migrations (NPD-RP-Backend/src/main/resources/db/migration) on start
   backend:
     build: ./NPD-RP-Backend
     environment:
@@ -49,16 +52,16 @@ services:
       DB_NAME: ${DB_NAME:-npd_rp}
       DB_USER: ${DB_USER:-npd_rp}
       DB_PASSWORD: ${DB_PASSWORD:-npd_rp}
-      # Same migrations the flyway service applies, so Spring's Flyway
-      # validates against them instead of the empty classpath folder
-      SPRING_FLYWAY_LOCATIONS: filesystem:/flyway/sql
-    volumes:
-      - ./db/migration:/flyway/sql:ro
+      # Tokens carry the browser URL as issuer; the keys are fetched over the Docker network.
+      # Keycloak is not in depends_on: keys are fetched on the first request, so a
+      # `docker compose run backend` (planner import) only needs Postgres.
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8081}/realms/npd
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/npd/protocol/openid-connect/certs
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
-      flyway:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
 
   # Identity provider. Local dev mode (HTTP, embedded H2 database kept in the keycloak-data volume).
   # On first start it imports every *.json realm in ./keycloak; realms that already exist are skipped.
@@ -111,7 +114,7 @@ services:
     depends_on:
       - backend
 
-  # --- AI Service (Python FastAPI) — uncomment once NPD-RP-AI-Service submodule is added ---
+  # --- AI Service (Python FastAPI) â€” uncomment once NPD-RP-AI-Service submodule is added ---
   # Expects NPD-RP-AI-Service/Dockerfile, e.g.:
   #   FROM python:3.13-slim
   #   WORKDIR /app
@@ -133,9 +136,10 @@ services:
   #     timeout: 5s
   #     retries: 5
   #   depends_on:
-  #     flyway:
-  #       condition: service_completed_successfully
+  #     backend:
+  #       condition: service_healthy
 
 volumes:
   pgdata:
   keycloak-data:
+  pgadmin-data:

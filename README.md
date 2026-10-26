@@ -5,10 +5,10 @@ Global Docker Compose environment for the NPD-RP microservices. Each service is 
 | Service    | Submodule           | Status      | Host port |
 |------------|---------------------|-------------|-----------|
 | Postgres   | —                   | active      | 5433      |
-| Flyway     | — (`db/migration`)  | active      | —         |
 | Backend    | `NPD-RP-Backend`    | active      | 8080      |
 | Keycloak   | — (`keycloak/`)     | active      | 8081      |
-| Frontend   | `NPD-RP-Frontend`   | not created | 5173      |
+| Frontend   | `NPD-RP-frontend`   | active      | 5173      |
+| pgAdmin    | — (`pgadmin/`)      | active      | 5050      |
 | AI Service | `NPD-RP-AI-Service` | not created | 8000      |
 
 ## Getting started
@@ -27,49 +27,38 @@ Health check: `curl localhost:8080/actuator/health`
 
 ## Database migrations
 
-The schema is versioned with [Flyway](https://documentation.red-gate.com/flyway). Migrations live in `db/migration` and the `flyway` service applies them on every `docker compose up`, after Postgres is healthy and before the backend starts. Already-applied versions are skipped, so the same files produce the same schema in every environment.
+The schema is versioned with [Flyway](https://documentation.red-gate.com/flyway) and owned by the backend: migrations live in `NPD-RP-Backend/src/main/resources/db/migration` and the backend applies the pending ones every time it starts. Already-applied versions are skipped. The data model is documented in [`NPD-RP-Backend/docs/database/README.md`](NPD-RP-Backend/docs/database/README.md).
 
-- Add a change: create `db/migration/V<next>__<description>.sql` (e.g. `V3__add_skills.sql`). Never edit a migration that has already been applied; add a new one instead.
-- Run only the migrations: `docker compose run --rm flyway` (or `docker compose run --rm flyway info` to see what is applied).
-- Start from scratch: `docker compose down -v` drops the `pgdata` volume.
+- Add a change: create the migration in the backend repo (`V<next>__<description>.sql`, never edit one already applied), then bump the submodule here (see [Updating submodules](#updating-submodules)).
+- See what is applied:
+  ```sh
+  docker compose exec postgres psql -U npd_rp -d npd_rp -c "select version, description, success from flyway_schema_history order by installed_rank"
+  ```
+- Start the database from scratch (deletes its data):
+  ```sh
+  docker compose stop
+  docker volume rm success_pgdata
+  ```
+  Don't use `docker compose down -v`: it also deletes `keycloak-data`, with Keycloak's users and settings.
 
-The backend mounts the same folder and points `SPRING_FLYWAY_LOCATIONS` at it, so Spring Boot's Flyway validates the same migrations instead of its empty `classpath:db/migration`.
+- Browse it with pgAdmin at http://localhost:5050. It opens without a login and already lists the `npd_rp (local)` server (`pgadmin/servers.json`); the first connection asks for `DB_PASSWORD` from `.env`. The server is registered only on pgAdmin's first start: after editing `servers.json`, run `docker compose stop pgadmin` and `docker volume rm success_pgadmin-data`.
 
-### Initial data model
+> **Old volumes:** a `success_pgdata` created when the migrations lived in this repo (`2 - create employee and assignment` in `flyway_schema_history`) doesn't match the backend's migrations, and the backend won't start. Delete that volume once, as above.
 
-Built from the 22 columns of the client's planner (`PLANIFICACION DE RECURSOS NPD`, sheet `PLANIFICADOR`). A planner row is an employee plus one of their assignments:
+## Planner import
 
-- `employee`: the person (code, name, email, HR data, employment status).
-- `assignment`: the employee on a project. An employee can have several active assignments at once; closed ones are kept as history.
-- `resource_v`: view that rebuilds the planner columns, one row per active assignment (or one row for an employee without any).
+Loads the client's planner Excel into the database with the backend image (no web server). Rebuild the image whenever the backend code changes:
 
-| Planner column                | Stored in                                                   |
-|-------------------------------|-------------------------------------------------------------|
-| CLIENTE                       | `project.client_id` → `client` (through the assignment's project) |
-| PROYECTO ASIGNADO             | `assignment.project_id` → `project` (`NULL` = without project) |
-| LIDER NPD, COD LIDER          | `assignment.leader_id` → `employee` (the lead is an employee) |
-| COD EMPL                      | `employee.code` (text, unique; admits temporary codes such as `T001`) |
-| NOMBRE DE EMPLEADO            | `employee.full_name`                                        |
-| PUESTO                        | `employee.job_title_id` → `job_title`                       |
-| POSICIÓN                      | `employee.job_position_id` → `job_position`                 |
-| ROL ACTUAL EN CLIENTE         | `assignment.client_role_id` → `client_role`                 |
-| NIVEL                         | `employee.level`                                            |
-| FECHA DE INICIO               | `employee.hire_date` (hire date); the start on each project is `assignment.start_date` |
-| UEN                           | `employee.business_unit_id` → `business_unit`               |
-| GENERO                        | `employee.gender_id` → `gender`                             |
-| EQUIPO / LAPTOP               | `assignment.equipment_provider_id` → `equipment_provider`   |
-| MES DE PROBATORIA             | `employee.probation_end_date`, calculated: `hire_date` + 90 days |
-| MES DE VACACIONES             | `employee.vacation_month`, calculated: month when 11 months since `hire_date` are completed |
-| FECHA FINAL PROYECTO          | `assignment.end_date` (`NULL` = INDEFINIDO)                 |
-| MES FINAL DE PROYECTO         | `resource_v.project_end_month`, calculated from `end_date`  |
-| ESTADO                        | `employee.status_id` → `resource_status` (Activo, Licencia, Baja) + `resource_v.assignment_situation` |
-| CORREO RECURSO                | `employee.email` (required, unique, case-insensitive)       |
-| CONTACTO POR CLIENTE          | `assignment.client_contact_email`                           |
-| MODALIDAD LABORAL DEL RECURSO | `employee.work_modality_id` → `work_modality`               |
+```powershell
+docker compose build backend
+docker compose run --rm `
+  -v C:/Users/<you>/Documents/npd-import:/import `
+  -e PLANNER_IMPORT_FILE=/import/planificador.xlsx `
+  -e SPRING_MAIN_WEB_APPLICATION_TYPE=none `
+  backend
+```
 
-`assignment_situation` is derived, never typed: `SIN_PROYECTO` when there is no project, `PENDIENTE_CONFIRMACION` when the end date has passed and the assignment has not been extended or closed yet, and `ASIGNADO` otherwise. An employee is therefore never shown as departed just because a project ended.
-
-V1 seeds only the fixed catalogs the application needs (`resource_status`, `business_unit`, `equipment_provider`, `work_modality`); no client or personal data from the planner is loaded. Catalog names are unique case-insensitively.
+It starts only Postgres, applies the migrations and leaves the report next to the Excel. Use a folder without spaces. Details and rules: [`NPD-RP-Backend/docs/planner-import/ejecucion.md`](NPD-RP-Backend/docs/planner-import/ejecucion.md).
 
 Each service's own `compose.yaml` still works standalone, but it uses the same host ports, so don't run both stacks at once.
 
@@ -80,6 +69,7 @@ Runs `quay.io/keycloak/keycloak:26.7.5` in dev mode (HTTP, embedded H2 database 
 - Admin console: http://localhost:8081, user and password from `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` in `.env` (only applied on the very first start).
 - From the browser: `http://localhost:8081/realms/<realm>`. Tokens always carry this URL as `iss`.
 - From other containers (e.g. the backend): `http://keycloak:8080/realms/<realm>` for the JWKS (`/protocol/openid-connect/certs`) and token endpoints. Validate the issuer against the `localhost:8081` URL, not this one.
+- The compose already wires the backend this way: `KEYCLOAK_ISSUER_URI` is the `localhost` URL of the `npd` realm and `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` points at `keycloak:8080`.
 
 ### Login theme (`keycloak/themes/npd`)
 
