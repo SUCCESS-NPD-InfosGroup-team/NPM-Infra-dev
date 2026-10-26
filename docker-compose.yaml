@@ -21,6 +21,26 @@ services:
       timeout: 5s
       retries: 10
 
+  # Web client for the database at http://localhost:5050. Desktop mode: no pgAdmin login,
+  # only the database password on the first connection. Local use only.
+  # The server in ./pgadmin/servers.json is registered on the first start (kept in pgadmin-data).
+  pgadmin:
+    image: dpage/pgadmin4:9.8
+    environment:
+      # Required by the image even in desktop mode; never asked for
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Applies its own Flyway migrations (NPD-RP-Backend/src/main/resources/db/migration) on start
   backend:
     build: ./NPD-RP-Backend
@@ -94,7 +114,7 @@ services:
     depends_on:
       - backend
 
-  # --- AI Service (Python FastAPI) — uncomment once NPD-RP-AI-Service submodule is added ---
+  # --- AI Service (Python FastAPI) â€” uncomment once NPD-RP-AI-Service submodule is added ---
   # Expects NPD-RP-AI-Service/Dockerfile, e.g.:
   #   FROM python:3.13-slim
   #   WORKDIR /app
@@ -122,3 +142,4 @@ services:
 volumes:
   pgdata:
   keycloak-data:
+  pgadmin-data:

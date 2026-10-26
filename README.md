@@ -8,6 +8,7 @@ Global Docker Compose environment for the NPD-RP microservices. Each service is 
 | Backend    | `NPD-RP-Backend`    | active      | 8080      |
 | Keycloak   | — (`keycloak/`)     | active      | 8081      |
 | Frontend   | `NPD-RP-frontend`   | active      | 5173      |
+| pgAdmin    | — (`pgadmin/`)      | active      | 5050      |
 | AI Service | `NPD-RP-AI-Service` | not created | 8000      |
 
 ## Getting started
@@ -39,6 +40,8 @@ The schema is versioned with [Flyway](https://documentation.red-gate.com/flyway)
   docker volume rm success_pgdata
   ```
   Don't use `docker compose down -v`: it also deletes `keycloak-data`, with Keycloak's users and settings.
+
+- Browse it with pgAdmin at http://localhost:5050. It opens without a login and already lists the `npd_rp (local)` server (`pgadmin/servers.json`); the first connection asks for `DB_PASSWORD` from `.env`. The server is registered only on pgAdmin's first start: after editing `servers.json`, run `docker compose stop pgadmin` and `docker volume rm success_pgadmin-data`.
 
 > **Old volumes:** a `success_pgdata` created when the migrations lived in this repo (`2 - create employee and assignment` in `flyway_schema_history`) doesn't match the backend's migrations, and the backend won't start. Delete that volume once, as above.
 

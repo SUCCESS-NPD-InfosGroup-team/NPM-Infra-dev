@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "npd_rp (local)",
+      "Group": "NPD-RP",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "npd_rp",
+      "SSLMode": "prefer"
+    }
+  }
+}
