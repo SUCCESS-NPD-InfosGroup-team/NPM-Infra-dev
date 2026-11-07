@@ -57,6 +57,9 @@ services:
       # `docker compose run backend` (planner import) only needs Postgres.
       KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8081}/realms/npd
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/npd/protocol/openid-connect/certs
+      # The issuer (localhost:8081) is not reachable from this container: the token and
+      # admin calls of the service account go to Keycloak over the Docker network
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
       # Service account for the Keycloak Admin REST API (user creation, SCRUM-93).
       # The backend does not start without these; the secret comes from the npd-backend
       # client's Credentials tab in Keycloak and must be set in .env.
