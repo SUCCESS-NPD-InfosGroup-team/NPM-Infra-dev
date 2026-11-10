@@ -81,9 +81,23 @@ The login pages use the `npd` theme, built from the Figma mockup (`NPD-InfosGrou
 
 ### Realm export (`keycloak/*.json`)
 
-On start Keycloak imports every `*.json` in `keycloak/` (mounted at `/opt/keycloak/data/import`). Each file must be named `<realm>-realm.json` after the realm it contains (the project realm is `npd`, so `npd-realm.json`); with any other name Keycloak refuses to start. The import only creates realms that don't exist yet: an already imported realm is never overwritten, so after changing the file run `docker compose down` and `docker volume rm <project>_keycloak-data` (or `docker compose down -v`, which also wipes Postgres) and start again.
+On start Keycloak imports `keycloak/npd-realm-dev.json`, the versioned dev realm. Compose mounts it as `/opt/keycloak/data/import/npd-realm.json` because Keycloak only accepts files named `<realm>-realm.json`. The import only creates realms that don't exist yet: an already imported realm is never overwritten, so after changing the file run `docker compose down` and `docker volume rm <project>_keycloak-data` (or `docker compose down -v`, which also wipes Postgres) and start again.
 
-The file is ignored by git (`keycloak/*.json` and `*realm*.json` in the root) because it contains client secrets, API keys and users. Share it through a secure channel, never in a commit or a chat.
+The dev realm holds no secrets. Keycloak resolves these `${VAR}` placeholders from the container environment on import (compose passes them from `.env`, see `.env.example`):
+
+| Placeholder | Used for |
+|---|---|
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret of the `npd-backend` client (same variable the backend reads) |
+| `NPD_AI_SERVICE_CLIENT_SECRET` | Secret of the `npd-ai-service` client |
+| `NPD_GOOGLE_CLIENT_ID` / `NPD_GOOGLE_CLIENT_SECRET` | Google identity provider (optional) |
+
+Realm keys and the secrets of built-in clients are not in the file; Keycloak generates them. What the dev realm includes for system tests: brute-force protection (lockout after 5 failures, CA-05), user and admin events stored for 7 days (Realm settings → Events, CA-07), Spanish locale, the `npd` login theme and these test users, all `operations-administrator` with password `Password12345` (local only):
+
+`juan.david`, `fran19campos@gmail.com`, `hamedp1103@gmail.com`, `ervaldes2828@gmail.com`, `zailynidrobo@unicauca.edu.co`
+
+Emails go to Mailpit (SMTP `mailpit:1025`, inbox at http://localhost:8025); nothing is delivered for real.
+
+Real exports (`keycloak/*.json` other than the dev realm, `*realm*.json` in the root) stay ignored by git because they contain client secrets, API keys and users. Share them through a secure channel, never in a commit or a chat. When you change the realm in the admin console, export it as below and carry the change over to `npd-realm-dev.json` without the secrets.
 
 Export the realm after configuring it in the admin console. Use the CLI, not the console's *Partial export*: that one masks client secrets as `**********` and leaves out users.
 

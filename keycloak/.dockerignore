@@ -1,2 +1,4 @@
 *.json
 email-resend/target
+.env
+*.env

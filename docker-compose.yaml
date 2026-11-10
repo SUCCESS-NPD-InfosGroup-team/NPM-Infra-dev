@@ -77,14 +77,20 @@ services:
         condition: service_healthy
 
   # Identity provider. Local dev mode (HTTP, embedded H2 database kept in the keycloak-data volume).
-  # On first start it imports every *.json realm in ./keycloak; realms that already exist are skipped.
-  # The realm export is not in git (it holds client secrets): see README > Keycloak.
+  # On first start it imports the versioned dev realm (keycloak/npd-realm-dev.json, no secrets);
+  # if the realm already exists in keycloak-data the import is skipped (see README > Keycloak).
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.5
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Secrets the dev realm reads as ${VAR} placeholders on import (set them in .env)
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET in .env (see .env.example)}
+      NPD_AI_SERVICE_CLIENT_SECRET: ${NPD_AI_SERVICE_CLIENT_SECRET:?set NPD_AI_SERVICE_CLIENT_SECRET in .env (see .env.example)}
+      # Optional: without them the "Google" button is shown but Google login fails
+      NPD_GOOGLE_CLIENT_ID: ${NPD_GOOGLE_CLIENT_ID:-}
+      NPD_GOOGLE_CLIENT_SECRET: ${NPD_GOOGLE_CLIENT_SECRET:-}
       # Tokens always carry the browser URL as issuer; containers (backend) can still
       # reach Keycloak at http://keycloak:8080 for keys and token introspection
       KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8081}
@@ -95,7 +101,9 @@ services:
       - "${KEYCLOAK_PORT:-8081}:8080"
     volumes:
       - keycloak-data:/opt/keycloak/data
-      - ./keycloak:/opt/keycloak/data/import
+      # Only the dev realm is imported. Keycloak needs the <realm>-realm.json name inside the
+      # container. To go back to the old secret-holding export, mount ./keycloak/npd-realm.json instead
+      - ./keycloak/npd-realm-dev.json:/opt/keycloak/data/import/npd-realm.json:ro
       # Login theme "npd" (keycloak/themes/npd); start-dev disables theme caching, so edits show on reload
       - ./keycloak/themes:/opt/keycloak/themes:ro
     healthcheck:
@@ -105,6 +113,15 @@ services:
       timeout: 5s
       retries: 15
       start_period: 30s
+    depends_on:
+      - mailpit
+
+  # Catches every email Keycloak sends in dev (invitations, password reset): http://localhost:8025
+  # The dev realm's SMTP points at mailpit:1025, so no SMTP credentials are needed and nothing leaves the machine
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
 
   # --- Frontend (React + Vite) ---
   # Runs the Vite dev server with hot reload; sources are bind-mounted from the submodule.
